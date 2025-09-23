@@ -792,6 +792,19 @@ a {
   margin-bottom: 4px;
 }
 
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0f172a;
+  color: white;
+  padding: 12px 18px;
+  border-radius: var(--radius-medium);
+  box-shadow: var(--shadow-soft);
+  z-index: 120;
+  max-width: 360px;
+}
+
 @media (max-width: 1024px) {
   .sidebar {
     display: none;
