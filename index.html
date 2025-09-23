@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LM Aseguradora - Gestión de Siniestros</title>
+    <link rel="stylesheet" href="styles/main.css" />
+  </head>
+  <body>
+    <div class="app">
+      <section id="login-view" class="view view--login">
+        <div class="login-card">
+          <div class="login-card__brand">
+            <div class="logo-circle">LM</div>
+            <div>
+              <h1>LM Aseguradora</h1>
+              <p>Portal de gestión de siniestros</p>
+            </div>
+          </div>
+          <form id="login-form" class="login-form">
+            <h2>Iniciar sesión</h2>
+            <label class="input-field">
+              <span>Usuario</span>
+              <input type="text" name="username" required autocomplete="username" />
+            </label>
+            <label class="input-field">
+              <span>Contraseña</span>
+              <input type="password" name="password" required autocomplete="current-password" />
+            </label>
+            <div class="login-actions">
+              <button type="submit" class="btn btn--primary">Ingresar</button>
+              <button type="button" id="forgot-password" class="btn btn--link">¿Olvidaste tu contraseña?</button>
+            </div>
+            <p class="login-hint">Roles soportados: Administración, Supervisor y Operativo.</p>
+          </form>
+          <form id="recover-form" class="login-form login-form--secondary hidden">
+            <h2>Recuperar contraseña</h2>
+            <label class="input-field">
+              <span>Correo electrónico</span>
+              <input type="email" name="email" required autocomplete="email" />
+            </label>
+            <p class="form-helper">Recibirás un correo con las instrucciones para restablecer tu contraseña.</p>
+            <div class="login-actions">
+              <button type="submit" class="btn btn--primary">Enviar instrucciones</button>
+              <button type="button" id="back-to-login" class="btn btn--ghost">Volver</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="dashboard-view" class="view view--dashboard hidden">
+        <aside class="sidebar">
+          <div class="sidebar__header">
+            <div class="logo-circle logo-circle--small">LM</div>
+            <div>
+              <strong>LM Aseguradora</strong>
+              <p>Panel integral</p>
+            </div>
+          </div>
+          <nav class="sidebar__nav">
+            <button class="nav-item active" data-module="overview">Dashboard</button>
+            <button class="nav-item" data-module="siniestros">Siniestros</button>
+            <button class="nav-item" data-module="consultas">Consultas</button>
+            <button class="nav-item" data-module="repuestos">Repuestos</button>
+            <button class="nav-item" data-module="automatizaciones">Automatizaciones</button>
+            <button class="nav-item" data-module="configuracion">Configuración</button>
+          </nav>
+          <div class="sidebar__footer">
+            <button id="logout" class="btn btn--ghost btn--full">Cerrar sesión</button>
+          </div>
+        </aside>
+
+        <main class="main">
+          <header class="topbar">
+            <div>
+              <h1 id="module-title">Dashboard general</h1>
+              <p class="topbar__subtitle">Visualiza y gestiona el ciclo completo de los siniestros.</p>
+            </div>
+            <div class="topbar__actions">
+              <button id="notifications-button" class="btn btn--ghost">Notificaciones</button>
+              <button id="change-password" class="btn btn--ghost">Cambiar contraseña</button>
+              <div class="user-chip">
+                <div class="avatar" id="user-avatar">AD</div>
+                <div>
+                  <span id="user-name">Admin Demo</span>
+                  <small id="user-role">Admin</small>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <section id="module-overview" class="module">
+            <div class="grid grid--stats">
+              <article class="stat-card">
+                <h3>Casos activos</h3>
+                <p class="stat-card__value" id="stat-open">0</p>
+                <span class="stat-card__detail">Casos abiertos y en seguimiento</span>
+              </article>
+              <article class="stat-card">
+                <h3>Fast track</h3>
+                <p class="stat-card__value" id="stat-fast-track">0</p>
+                <span class="stat-card__detail">Casos resueltos sin derivación a taller</span>
+              </article>
+              <article class="stat-card">
+                <h3>Alertas activas</h3>
+                <p class="stat-card__value" id="stat-alerts">0</p>
+                <span class="stat-card__detail">Alertas amarillas y rojas</span>
+              </article>
+              <article class="stat-card">
+                <h3>Tiempo promedio</h3>
+                <p class="stat-card__value" id="stat-average">0 días</p>
+                <span class="stat-card__detail">Duración de ciclo hasta cierre</span>
+              </article>
+            </div>
+
+            <div class="grid grid--two">
+              <section class="card">
+                <header class="card__header">
+                  <h2>Embudo de estados</h2>
+                </header>
+                <div class="funnel" id="funnel-overview"></div>
+              </section>
+              <section class="card">
+                <header class="card__header">
+                  <h2>Recordatorios automáticos</h2>
+                  <button class="btn btn--tiny" id="add-reminder">Agregar recordatorio</button>
+                </header>
+                <ul class="reminder-list" id="reminder-list"></ul>
+              </section>
+            </div>
+          </section>
+
+          <section id="module-siniestros" class="module hidden">
+            <div class="module__header">
+              <div>
+                <h2>Gestión de siniestros</h2>
+                <p>Control integral de casos abiertos, en seguimiento y cerrados.</p>
+              </div>
+              <button id="new-claim" class="btn btn--primary">Nuevo siniestro</button>
+            </div>
+
+            <section class="card">
+              <header class="card__header card__header--filters">
+                <div class="filters">
+                  <label class="input-field input-field--compact">
+                    <span>Buscar</span>
+                    <input type="search" id="filter-search" placeholder="Patente, DNI, nombre..." />
+                  </label>
+                  <label class="input-field input-field--compact">
+                    <span>Estado</span>
+                    <select id="filter-status">
+                      <option value="todos">Todos</option>
+                      <option value="Ingreso">Ingreso</option>
+                      <option value="Documentación">Documentación</option>
+                      <option value="Taller">En taller</option>
+                      <option value="Fast Track">Fast track</option>
+                      <option value="Cerrado">Cerrado</option>
+                    </select>
+                  </label>
+                  <label class="input-field input-field--compact">
+                    <span>Taller</span>
+                    <select id="filter-workshop">
+                      <option value="todos">Todos</option>
+                    </select>
+                  </label>
+                  <label class="input-field input-field--compact">
+                    <span>Consorcio</span>
+                    <select id="filter-consorcio">
+                      <option value="todos">Todos</option>
+                    </select>
+                  </label>
+                  <label class="input-field input-field--compact">
+                    <span>Reclamo</span>
+                    <select id="filter-claim">
+                      <option value="todos">Todos</option>
+                      <option value="si">Sí</option>
+                      <option value="no">No</option>
+                    </select>
+                  </label>
+                  <label class="input-field input-field--compact">
+                    <span>Desde</span>
+                    <input type="date" id="filter-from" />
+                  </label>
+                  <label class="input-field input-field--compact">
+                    <span>Hasta</span>
+                    <input type="date" id="filter-to" />
+                  </label>
+                </div>
+                <div class="filter-actions">
+                  <button id="clear-filters" class="btn btn--ghost">Limpiar</button>
+                  <button id="export-data" class="btn btn--ghost">Exportar Excel</button>
+                </div>
+              </header>
+              <div class="kanban" id="kanban-board"></div>
+            </section>
+
+            <section class="grid grid--two">
+              <article class="card">
+                <header class="card__header">
+                  <h3>Alertas y seguimiento</h3>
+                </header>
+                <ul class="alert-list" id="alert-list"></ul>
+              </article>
+              <article class="card">
+                <header class="card__header">
+                  <h3>Tareas automáticas</h3>
+                </header>
+                <ul class="automation-list" id="automation-list"></ul>
+              </article>
+            </section>
+          </section>
+
+          <section id="module-consultas" class="module hidden">
+            <div class="module__header">
+              <div>
+                <h2>Consultas de asegurados</h2>
+                <p>Consulta ágil de pólizas y siniestros relacionados.</p>
+              </div>
+            </div>
+            <section class="card">
+              <header class="card__header">
+                <h3>Buscar asegurado</h3>
+              </header>
+              <form id="insured-search" class="search-grid">
+                <label class="input-field">
+                  <span>Patente</span>
+                  <input name="plate" placeholder="AA123BB" />
+                </label>
+                <label class="input-field">
+                  <span>DNI</span>
+                  <input name="dni" placeholder="00000000" />
+                </label>
+                <label class="input-field">
+                  <span>Nombre y apellido</span>
+                  <input name="name" placeholder="Juan Pérez" />
+                </label>
+                <button type="submit" class="btn btn--primary">Consultar</button>
+              </form>
+              <div id="insured-result" class="search-result"></div>
+            </section>
+          </section>
+
+          <section id="module-repuestos" class="module hidden">
+            <div class="module__header">
+              <div>
+                <h2>Gestión de repuestos</h2>
+                <p>Módulo en diseño. Permitirá solicitar, aprobar y conciliar repuestos.</p>
+              </div>
+            </div>
+            <section class="card placeholder">
+              <h3>Próximamente</h3>
+              <p>El módulo de repuestos incluirá integración con talleres, seguimiento de pedidos y control de stock.</p>
+              <ul>
+                <li>Catálogo de repuestos homologados</li>
+                <li>Integración con compras y proveedores</li>
+                <li>Alertas por demoras de entrega</li>
+              </ul>
+            </section>
+          </section>
+
+          <section id="module-automatizaciones" class="module hidden">
+            <div class="module__header">
+              <div>
+                <h2>Automatizaciones y reglas</h2>
+                <p>Diseña el flujo de alertas, asignaciones y notificaciones.</p>
+              </div>
+            </div>
+            <section class="card">
+              <header class="card__header">
+                <h3>Motor de reglas</h3>
+              </header>
+              <ul class="automation-rules" id="automation-rules"></ul>
+            </section>
+          </section>
+
+          <section id="module-configuracion" class="module hidden">
+            <div class="module__header">
+              <div>
+                <h2>Configuración</h2>
+                <p>Administra roles, talleres, consorcios y personas a cargo.</p>
+              </div>
+            </div>
+            <section class="card">
+              <header class="card__header">
+                <h3>Resumen de catálogo</h3>
+              </header>
+              <div class="config-grid" id="config-grid"></div>
+            </section>
+          </section>
+        </main>
+      </section>
+    </div>
+
+    <div id="modal-layer"></div>
+
+    <script type="module" src="scripts/app.js"></script>
+  </body>
+</html>
