@@ -11,6 +11,8 @@ export function cloneClaims(list) {
     tasks: claim.tasks ? claim.tasks.map((t) => ({ ...t })) : [],
     documentation: claim.documentation ? claim.documentation.map((doc) => ({ ...doc })) : [],
     expansions: claim.expansions ? claim.expansions.map((expansion) => ({ ...expansion })) : [],
+    otherConcepts: claim.otherConcepts ? [...claim.otherConcepts] : [],
+    partsDetail: claim.partsDetail ? claim.partsDetail.map((part) => ({ ...part })) : [],
   }));
 }
 
@@ -185,6 +187,48 @@ export function applyClaimUpdates(claim, updates, user) {
     changes.push('Notas actualizadas');
     updated.fastTrackNotes = notes;
   }
+  const claimType = updates.claimType || 'Reparación';
+  if ((claim.claimType || 'Reparación') !== claimType) {
+    changes.push(`Tipo de siniestro: ${claim.claimType || 'Sin dato'} → ${claimType}`);
+    updated.claimType = claimType;
+  }
+  const stroNumber = updates.stroNumber?.trim() || '';
+  if ((claim.stroNumber || '') !== stroNumber) {
+    changes.push('STR0 actualizado');
+    updated.stroNumber = stroNumber;
+  }
+  const repairNumber = updates.repairNumber?.trim() || '';
+  if ((claim.repairNumber || '') !== repairNumber) {
+    changes.push('Número de reparación actualizado');
+    updated.repairNumber = repairNumber;
+  }
+  const recoveryType = updates.recoveryType || 'Ninguno';
+  if ((claim.recoveryType || 'Ninguno') !== recoveryType) {
+    changes.push(`Reclamo / Recupero: ${claim.recoveryType || 'Sin dato'} → ${recoveryType}`);
+    updated.recoveryType = recoveryType;
+    updated.hasRecovery = recoveryType !== 'Ninguno';
+  }
+  const creditorType = updates.creditorType || '';
+  if ((claim.creditorType || '') !== creditorType) {
+    changes.push('Tipo de acreedor actualizado');
+    updated.creditorType = creditorType;
+  }
+  const creditorName = updates.creditorName?.trim() || '';
+  if ((claim.creditorName || '') !== creditorName) {
+    changes.push('Acreedor actualizado');
+    updated.creditorName = creditorName;
+  }
+  const hasInvoice = Boolean(updates.hasInvoice);
+  if (Boolean(claim.hasInvoice) !== hasInvoice) {
+    changes.push(hasInvoice ? 'Factura recibida' : 'Factura pendiente');
+    updated.hasInvoice = hasInvoice;
+  }
+  const otherConcepts = updates.otherConcepts ? updates.otherConcepts.filter(Boolean) : [];
+  const currentConcepts = claim.otherConcepts ? claim.otherConcepts.filter(Boolean) : [];
+  if (JSON.stringify(currentConcepts) !== JSON.stringify(otherConcepts)) {
+    changes.push('Otros conceptos actualizados');
+    updated.otherConcepts = otherConcepts;
+  }
   if (changes.length) {
     updated = appendHistory(updated, changes, user);
   }
@@ -241,10 +285,12 @@ export function filterClaims(claims, filters) {
     const matchesClaim =
       claim === 'todos'
         ? true
-        : claim === 'si'
-        ? item.hasRecovery
-        : claim === 'no'
-        ? !item.hasRecovery
+        : claim === 'reclamo'
+        ? item.recoveryType === 'Reclamo'
+        : claim === 'recupero'
+        ? item.recoveryType === 'Recupero'
+        : claim === 'ninguno'
+        ? !item.recoveryType || item.recoveryType === 'Ninguno'
         : true;
     const matchesFrom = from ? new Date(item.eventDate) >= new Date(from) : true;
     const matchesTo = to ? new Date(item.eventDate) <= new Date(to) : true;
@@ -306,14 +352,30 @@ export function buildClaimFromDraft(draft) {
     plate: draft.plate,
     dni: draft.dni,
     name: draft.name,
+    brand: draft.brand || '',
+    model: draft.model || '',
     eventDate: draft.eventDate,
     reportDate: draft.reportDate,
     description: draft.description,
     consorcioFlag: draft.consorcioFlag,
     consorcioOption: draft.consorcioOption,
     consorcio: consorcioName,
-    hasRecovery: draft.hasRecovery,
-    state: draft.closeDirectly ? 'Cerrado' : draft.fastTrack ? 'Fast Track' : draft.workshop ? 'Taller' : 'Ingreso',
+    hasRecovery: draft.recoveryType && draft.recoveryType !== 'Ninguno',
+    stroNumber: draft.stroNumber || '',
+    repairNumber: draft.repairNumber || '',
+    claimType: draft.claimType || 'Reparación',
+    recoveryType: draft.recoveryType || 'Ninguno',
+    creditorType: draft.creditorType || '',
+    creditorName: draft.creditorName?.trim() || '',
+    hasInvoice: Boolean(draft.hasInvoice),
+    otherConcepts: draft.otherConcepts ? draft.otherConcepts.filter(Boolean) : [],
+    state: draft.closeDirectly
+      ? 'Cerrado'
+      : draft.fastTrack
+      ? 'Fast Track'
+      : draft.workshop
+      ? 'Taller'
+      : 'Ingreso',
     stage: draft.fastTrack
       ? 'Derivado a circuito Fast Track'
       : draft.workshop
@@ -331,6 +393,7 @@ export function buildClaimFromDraft(draft) {
     followUps: [],
     attachments: [...(draft.attachments || [])],
     tasks: generateInitialTasks(draft),
+    partsDetail: draft.partsDetail ? draft.partsDetail.map((part) => ({ ...part })) : [],
     lastUpdate: new Date().toISOString(),
   };
 }
@@ -344,7 +407,20 @@ export function exportClaimsToCsv(claims) {
   if (!claims.length) {
     return null;
   }
-  const headers = ['ID', 'Patente', 'DNI', 'Asegurado', 'Fecha de siniestro', 'Estado', 'Consorcio', 'Taller', 'Reclamo', 'Fast Track'];
+  const headers = [
+    'ID',
+    'Patente',
+    'DNI',
+    'Asegurado',
+    'Fecha de siniestro',
+    'Estado',
+    'Consorcio',
+    'Taller',
+    'Tipo de siniestro',
+    'Reclamo / Recupero',
+    'Factura recibida',
+    'Fast Track',
+  ];
   const rows = claims.map((claim) => [
     claim.id,
     claim.plate,
@@ -354,7 +430,9 @@ export function exportClaimsToCsv(claims) {
     claim.state,
     claim.consorcio,
     claim.workshopName || '',
-    claim.hasRecovery ? 'Sí' : 'No',
+    claim.claimType || '',
+    claim.recoveryType && claim.recoveryType !== 'Ninguno' ? claim.recoveryType : 'No aplica',
+    claim.hasInvoice ? 'Sí' : 'No',
     claim.fastTrack ? 'Sí' : 'No',
   ]);
   const csv = [headers, ...rows]
