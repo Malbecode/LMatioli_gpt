@@ -11,6 +11,8 @@ import {
   reminders as initialReminders,
   notifications as initialNotifications,
   catalogSummary,
+  peritoInspections as initialPeritoInspections,
+  partsTracking as initialPartsTracking,
 } from './data/index.js';
 import {
   STATUS_ORDER,
@@ -51,6 +53,29 @@ function App() {
   });
   const [reminders, setReminders] = useState(() => [...initialReminders]);
   const [notifications] = useState(() => [...initialNotifications]);
+  const [peritoEntries] = useState(() =>
+    initialPeritoInspections.map((inspection) => ({
+      ...inspection,
+      damages: inspection.damages ? inspection.damages.map((damage) => ({ ...damage })) : [],
+      parts: inspection.parts ? inspection.parts.map((part) => ({ ...part })) : [],
+    })),
+  );
+  const [partsOrders] = useState(() =>
+    initialPartsTracking.map((order) => ({
+      ...order,
+      parts: order.parts
+        ? order.parts.map((part) => ({
+            ...part,
+            supplierQuotes: part.supplierQuotes
+              ? part.supplierQuotes.map((quote) => ({ ...quote }))
+              : [],
+          }))
+        : [],
+      adjustments: order.adjustments ? order.adjustments.map((adjustment) => ({ ...adjustment })) : [],
+      expansions: order.expansions ? order.expansions.map((expansion) => ({ ...expansion })) : [],
+      timeline: order.timeline ? order.timeline.map((item) => ({ ...item })) : [],
+    })),
+  );
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState(null);
   const [loginError, setLoginError] = useState('');
@@ -288,7 +313,7 @@ function App() {
     },
     repuestos: {
       title: 'Gestión de repuestos',
-      subtitle: 'Módulo en diseño: pedidos, aprobaciones y conciliación.',
+      subtitle: 'Seguimiento de pedidos, ajustes y entregas de repuestos.',
     },
     automatizaciones: {
       title: 'Automatizaciones y reglas',
@@ -338,12 +363,16 @@ function App() {
               onOpenClaim={openClaimDetailModal}
               alertEntries={alertEntries}
               automationTasks={automationTasks}
+              peritoInspections={peritoEntries}
+              onShowToast={showToast}
             />
           )}
           {activeModule === 'consultas' && (
             <ConsultasModule insuredDirectory={insuredDirectory} />
           )}
-          {activeModule === 'repuestos' && <PlaceholderModule />}
+          {activeModule === 'repuestos' && (
+            <RepuestosModule orders={partsOrders} onShowToast={showToast} />
+          )}
           {activeModule === 'automatizaciones' && (
             <AutomationsModule rules={automationRules} />
           )}
@@ -661,10 +690,66 @@ function SiniestrosModule({
   onOpenClaim,
   alertEntries,
   automationTasks,
+  peritoInspections,
+  onShowToast,
 }) {
   const handleChange = (event) => {
     const { name, value } = event.target;
     onFilterChange(name, value);
+  };
+
+  const inspections = peritoInspections ?? [];
+  const documentationAlerts = claims
+    .flatMap((claim) =>
+      (claim.documentation ?? []).map((document) => ({
+        claimId: claim.id,
+        ...document,
+      })),
+    )
+    .filter((document) => !['completo', 'no-aplica'].includes(document.status));
+  const expansions = claims.flatMap((claim) =>
+    (claim.expansions ?? []).map((expansion) => ({
+      claimId: claim.id,
+      ...expansion,
+    })),
+  );
+
+  const documentationStatusCopy = {
+    pendiente: { label: 'Pendiente', className: 'tag tag--danger' },
+    'en-proceso': { label: 'En proceso', className: 'tag tag--warning' },
+    completo: { label: 'Completo', className: 'tag tag--success' },
+    'no-aplica': { label: 'No aplica', className: 'tag' },
+  };
+
+  const getDocumentMeta = (status) => documentationStatusCopy[status] ?? { label: status, className: 'tag' };
+
+  const getExpansionMeta = (status) => {
+    if (!status) return { label: 'En análisis', className: 'tag tag--warning' };
+    const normalized = status.toLowerCase();
+    if (normalized.includes('aprob')) {
+      return { label: status, className: 'tag tag--success' };
+    }
+    if (normalized.includes('pend') || normalized.includes('revisión') || normalized.includes('revis')) {
+      return { label: status, className: 'tag tag--warning' };
+    }
+    if (normalized.includes('no aplica')) {
+      return { label: status, className: 'tag' };
+    }
+    return { label: status, className: 'tag' };
+  };
+
+  const handleCopyLink = async (link) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+        onShowToast?.('Enlace copiado para enviar al perito.');
+        return;
+      }
+      throw new Error('Clipboard no disponible');
+    } catch (error) {
+      console.error(error);
+      onShowToast?.('No se pudo copiar el enlace. Copialo manualmente.');
+    }
   };
 
   return (
@@ -806,6 +891,96 @@ function SiniestrosModule({
             );
           })}
         </div>
+      </section>
+
+      <section className="grid grid--two">
+        <article className="card">
+          <header className="card__header">
+            <h3>Portal digital para peritos</h3>
+          </header>
+          <ul className="perito-list">
+            {inspections.length === 0 ? (
+              <li className="form-helper">No hay enlaces generados para peritos.</li>
+            ) : (
+              inspections.map((inspection) => (
+                <li key={inspection.claimId} className="perito-item">
+                  <div>
+                    <strong>{inspection.claimId}</strong>
+                    <small>
+                      {inspection.inspector} · Visita {formatDateTime(inspection.scheduled)}
+                    </small>
+                    <p>{inspection.observations}</p>
+                    <small>
+                      {inspection.damages?.length ?? 0} daños registrados · {inspection.parts?.length ?? 0} repuestos ·{' '}
+                      {inspection.photos} fotos
+                    </small>
+                  </div>
+                  <button className="btn btn--tiny" onClick={() => handleCopyLink(inspection.link)}>
+                    Copiar enlace
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </article>
+        <article className="card">
+          <header className="card__header">
+            <h3>Documentación crítica</h3>
+          </header>
+          <ul className="document-summary">
+            {documentationAlerts.length === 0 ? (
+              <li className="form-helper">Todos los documentos requeridos están al día.</li>
+            ) : (
+              documentationAlerts.map((document) => {
+                const meta = getDocumentMeta(document.status);
+                return (
+                  <li key={`${document.claimId}-${document.id}`} className="document-summary__item">
+                    <div>
+                      <strong>{document.label}</strong>
+                      <small>{document.claimId}</small>
+                      {document.notes && <p>{document.notes}</p>}
+                    </div>
+                    <span className={meta.className}>{meta.label}</span>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </article>
+      </section>
+
+      <section className="card">
+        <header className="card__header">
+          <div>
+            <h3>Registro de ampliaciones</h3>
+            <p className="card__helper">Daños adicionales detectados durante la reparación.</p>
+          </div>
+          <button className="btn btn--ghost" onClick={() => onShowToast?.('Exportando ampliaciones a CSV...')}>
+            Exportar CSV
+          </button>
+        </header>
+        <ul className="expansion-list">
+          {expansions.length === 0 ? (
+            <li className="form-helper">No se registraron ampliaciones en los siniestros activos.</li>
+          ) : (
+            expansions.map((expansion, index) => {
+              const meta = getExpansionMeta(expansion.status);
+              return (
+                <li key={`${expansion.claimId}-${index}`} className="expansion-item">
+                  <div>
+                    <strong>{expansion.claimId}</strong>
+                    <small>Detectado el {formatDate(expansion.date)}</small>
+                    <p>{expansion.detail}</p>
+                  </div>
+                  <div className="expansion-item__status">
+                    <span className={meta.className}>{meta.label}</span>
+                    {expansion.impact && <small>{expansion.impact}</small>}
+                  </div>
+                </li>
+              );
+            })
+          )}
+        </ul>
       </section>
 
       <section className="grid grid--two">
@@ -975,26 +1150,265 @@ function ConsultasModule({ insuredDirectory }) {
   );
 }
 
-function PlaceholderModule() {
+function RepuestosModule({ orders, onShowToast }) {
+  const data = orders ?? [];
+  const [selected, setSelected] = useState(() => data[0] ?? null);
+
+  useEffect(() => {
+    if (!orders || orders.length === 0) {
+      setSelected(null);
+      return;
+    }
+    setSelected((prev) => {
+      if (prev && orders.some((order) => order.claimId === prev.claimId)) {
+        return prev;
+      }
+      return orders[0];
+    });
+  }, [orders]);
+
+  const totalOrders = data.length;
+  const openOrders = data.filter((order) => order.status !== 'entregado').length;
+  const unavailableParts = data.reduce(
+    (acc, order) => acc + order.parts.filter((part) => part.status?.toLowerCase().includes('no disponible')).length,
+    0,
+  );
+  const totalAdjustments = data.reduce((acc, order) => acc + (order.adjustments?.length ?? 0), 0);
+
+  const partStatusClass = (status) => {
+    if (!status) return 'tag';
+    const normalized = status.toLowerCase();
+    if (normalized.includes('no disponible')) return 'tag tag--danger';
+    if (normalized.includes('encarg')) return 'tag tag--warning';
+    if (normalized.includes('cotiz')) return 'tag tag--warning';
+    if (normalized.includes('comprado')) return 'tag tag--success';
+    if (normalized.includes('entregado') || normalized.includes('listo')) return 'tag tag--success';
+    return 'tag';
+  };
+
+  const handleExportOrder = () => {
+    onShowToast?.('Generando archivo para liquidación de consorcio...');
+  };
+
+  const handleScheduleSftp = () => {
+    onShowToast?.('Programando envío SFTP al sistema de liquidación.');
+  };
+
   return (
     <section className="module">
       <div className="module__header">
         <div>
           <h2>Gestión de repuestos</h2>
-          <p>Módulo en diseño. Permitirá solicitar, aprobar y conciliar repuestos.</p>
+          <p>Centraliza cotizaciones, pedidos y entregas vinculadas a cada siniestro.</p>
         </div>
       </div>
-      <section className="card placeholder">
-        <h3>Próximamente</h3>
-        <p>
-          El módulo de repuestos incluirá integración con talleres, seguimiento de pedidos y control de stock.
-        </p>
-        <ul>
-          <li>Catálogo de repuestos homologados</li>
-          <li>Integración con compras y proveedores</li>
-          <li>Alertas por demoras de entrega</li>
-        </ul>
+
+      <div className="grid grid--stats">
+        <article className="stat-card">
+          <h3>Pedidos activos</h3>
+          <p className="stat-card__value">{totalOrders}</p>
+          <span className="stat-card__detail">Casos con repuestos en seguimiento</span>
+        </article>
+        <article className="stat-card">
+          <h3>En gestión</h3>
+          <p className="stat-card__value">{openOrders}</p>
+          <span className="stat-card__detail">Pendientes de entrega</span>
+        </article>
+        <article className="stat-card">
+          <h3>Sin disponibilidad</h3>
+          <p className="stat-card__value">{unavailableParts}</p>
+          <span className="stat-card__detail">Piezas con búsqueda activa</span>
+        </article>
+        <article className="stat-card">
+          <h3>Ajustes registrados</h3>
+          <p className="stat-card__value">{totalAdjustments}</p>
+          <span className="stat-card__detail">Modificaciones de precios o condiciones</span>
+        </article>
+      </div>
+
+      <section className="card">
+        <header className="card__header">
+          <div>
+            <h3>Tablero de pedidos</h3>
+            <p className="card__helper">Visualiza el estado y próximos pasos por siniestro.</p>
+          </div>
+        </header>
+        <div className="parts-table">
+          {data.length === 0 ? (
+            <p className="form-helper">No hay pedidos de repuestos registrados.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Siniestro</th>
+                  <th>Taller</th>
+                  <th>Estado</th>
+                  <th>Próximo paso</th>
+                  <th>Plazo objetivo</th>
+                  <th>Contacto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((order) => (
+                  <tr
+                    key={order.claimId}
+                    className={selected?.claimId === order.claimId ? 'is-selected' : ''}
+                    onClick={() => setSelected(order)}
+                  >
+                    <td>
+                      <strong>{order.claimId}</strong>
+                      <small>{order.vehicle}</small>
+                    </td>
+                    <td>
+                      <strong>{order.workshop}</strong>
+                      <small>{order.consorcio}</small>
+                    </td>
+                    <td>
+                      <span className={`tag parts-status parts-status--${order.status}`}>{order.statusLabel}</span>
+                      <small>Actualizado {formatDateTime(order.lastUpdate)}</small>
+                    </td>
+                    <td>
+                      <p>{order.nextStep}</p>
+                    </td>
+                    <td>
+                      <strong>{formatDate(order.dueDate)}</strong>
+                      <small>Entrega estimada</small>
+                    </td>
+                    <td>
+                      <strong>{order.contact?.name}</strong>
+                      <small>{order.contact?.phone}</small>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </section>
+
+      {selected && (
+        <section className="card">
+          <header className="card__header">
+            <div>
+              <h3>
+                Detalle {selected.claimId} · {selected.vehicle}
+              </h3>
+              <p className="card__helper">{selected.statusLabel} · Próximo hito: {selected.nextStep}</p>
+            </div>
+            <div className="detail-actions">
+              <button className="btn btn--ghost" onClick={() => onShowToast?.('Actualización enviada al taller.')}> 
+                Notificar taller
+              </button>
+              <button className="btn btn--ghost" onClick={handleExportOrder}>
+                Exportar CSV
+              </button>
+              <button className="btn btn--ghost" onClick={handleScheduleSftp}>
+                Programar SFTP
+              </button>
+            </div>
+          </header>
+          <div className="parts-detail">
+            <div>
+              <h4>Repuestos solicitados</h4>
+              <ul className="parts-detail__list">
+                {selected.parts.length === 0 ? (
+                  <li className="history-item">Sin repuestos asociados.</li>
+                ) : (
+                  selected.parts.map((part, index) => (
+                    <li key={`${part.name}-${index}`} className="parts-detail__item">
+                      <div>
+                        <strong>{part.name}</strong>
+                        <small>{part.action}</small>
+                        <div className="parts-detail__status">
+                          <span className={partStatusClass(part.status)}>{part.status}</span>
+                          <small>Proveedor sugerido: {part.approvedProvider || 'Pendiente'}</small>
+                          <small>Entrega estimada: {formatDate(part.expectedDate)}</small>
+                        </div>
+                        {part.notes && <p>{part.notes}</p>}
+                      </div>
+                      <div className="parts-detail__quotes">
+                        {part.supplierQuotes?.map((quote, quoteIndex) => (
+                          <span key={`${part.name}-${quoteIndex}`}>
+                            {quote.provider} · {quote.price} · {quote.eta}
+                          </span>
+                        ))}
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+            <aside className="parts-detail__sidebar">
+              <section>
+                <h4>Ajustes de precio</h4>
+                <ul className="history-list">
+                  {selected.adjustments.length === 0 ? (
+                    <li className="history-item">No hay ajustes registrados.</li>
+                  ) : (
+                    selected.adjustments.map((adjustment, index) => (
+                      <li key={`${adjustment.date}-${index}`} className="history-item">
+                        <strong>{formatDate(adjustment.date)}</strong>
+                        <p>{adjustment.description}</p>
+                        <small>{adjustment.impact} · Aprobó {adjustment.approvedBy}</small>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </section>
+              <section>
+                <h4>Ampliaciones vinculadas</h4>
+                <ul className="history-list">
+                  {selected.expansions.length === 0 ? (
+                    <li className="history-item">Sin ampliaciones en este pedido.</li>
+                  ) : (
+                    selected.expansions.map((expansion, index) => (
+                      <li key={`${expansion.date}-${index}`} className="history-item">
+                        <strong>{formatDate(expansion.date)}</strong>
+                        <p>{expansion.detail}</p>
+                        <small>{expansion.status}</small>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </section>
+            </aside>
+          </div>
+          <div className="parts-timeline">
+            <h4>Hitos del pedido</h4>
+            <ul className="timeline">
+              {selected.timeline.length === 0 ? (
+                <li className="history-item">Sin hitos registrados.</li>
+              ) : (
+                selected.timeline.map((item, index) => (
+                  <li key={`${item.date}-${index}`} className="history-item">
+                    <strong>{formatDate(item.date)}</strong>
+                    <p>{item.label}</p>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+          <footer className="parts-footer">
+            <p>
+              ¿Necesitás conciliar con contabilidad o consorcios? Exportá el detalle o programa el envío automático por SFTP.
+            </p>
+            <div className="parts-footer__actions">
+              <button className="btn btn--primary" onClick={handleExportOrder}>
+                Exportar para conciliación
+              </button>
+              <button className="btn btn--ghost" onClick={handleScheduleSftp}>
+                Configurar integración SFTP
+              </button>
+            </div>
+          </footer>
+        </section>
+      )}
+
+      {!selected && data.length > 0 && (
+        <section className="card">
+          <p className="form-helper">Selecciona un pedido para ver los detalles.</p>
+        </section>
+      )}
     </section>
   );
 }
@@ -1290,6 +1704,29 @@ function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask,
       ? 'tag tag--warning'
       : 'tag tag--success';
 
+  const documentMeta = (status) => {
+    const meta = {
+      pendiente: { label: 'Pendiente', className: 'tag tag--danger' },
+      'en-proceso': { label: 'En proceso', className: 'tag tag--warning' },
+      completo: { label: 'Completo', className: 'tag tag--success' },
+      'no-aplica': { label: 'No aplica', className: 'tag' },
+    };
+    return meta[status] ?? { label: status, className: 'tag' };
+  };
+
+  const expansionMeta = (status) => {
+    if (!status) return { label: 'En análisis', className: 'tag tag--warning' };
+    const normalized = status.toLowerCase();
+    if (normalized.includes('aprob')) return { label: status, className: 'tag tag--success' };
+    if (normalized.includes('pend') || normalized.includes('revisión') || normalized.includes('revis')) {
+      return { label: status, className: 'tag tag--warning' };
+    }
+    if (normalized.includes('no aplica')) {
+      return { label: status, className: 'tag' };
+    }
+    return { label: status, className: 'tag' };
+  };
+
   return (
     <Modal
       title={`Detalle del siniestro ${claim.id}`}
@@ -1426,6 +1863,57 @@ function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask,
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="detail-grid">
+        <div>
+          <p className="section-title">Documentación del siniestro</p>
+          <ul className="document-list">
+            {(claim.documentation ?? []).length === 0 ? (
+              <li className="history-item">No hay documentación configurada para este siniestro.</li>
+            ) : (
+              claim.documentation.map((document) => {
+                const meta = documentMeta(document.status);
+                return (
+                  <li key={document.id} className="history-item document-item">
+                    <div>
+                      <strong>{document.label}</strong>
+                      {document.notes && <p>{document.notes}</p>}
+                      <small>
+                        {document.lastUpdate
+                          ? `Última actualización ${formatDateTime(document.lastUpdate)}`
+                          : 'Sin registro'}
+                      </small>
+                    </div>
+                    <span className={meta.className}>{meta.label}</span>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+        <div>
+          <p className="section-title">Ampliaciones detectadas</p>
+          <ul className="history-list">
+            {(claim.expansions ?? []).length === 0 ? (
+              <li className="history-item">No se registraron ampliaciones.</li>
+            ) : (
+              claim.expansions.map((expansion, index) => {
+                const meta = expansionMeta(expansion.status);
+                return (
+                  <li key={`${expansion.date}-${index}`} className="history-item">
+                    <div className="expansion-detail__header">
+                      <strong>{formatDate(expansion.date)}</strong>
+                      <span className={meta.className}>{meta.label}</span>
+                    </div>
+                    <p>{expansion.detail}</p>
+                    {expansion.impact && <small>{expansion.impact}</small>}
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
       </div>
 
       <div className="detail-grid">
