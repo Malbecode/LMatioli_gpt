@@ -805,6 +805,214 @@ a {
   max-width: 360px;
 }
 
+.card__helper {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.perito-list,
+.document-summary,
+.expansion-list,
+.document-list,
+.parts-detail__list,
+.parts-detail__quotes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.perito-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-medium);
+  border: 1px solid rgba(0, 68, 170, 0.14);
+  background: rgba(248, 250, 255, 0.8);
+}
+
+.perito-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.perito-item small {
+  display: block;
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+
+.document-summary__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: var(--radius-medium);
+  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.document-summary__item p {
+  margin-top: 6px;
+  color: var(--color-muted);
+  max-width: 360px;
+}
+
+.document-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.document-item p {
+  margin: 6px 0;
+  color: var(--color-muted);
+}
+
+.expansion-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-medium);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 255, 0.9);
+}
+
+.expansion-item__status {
+  display: grid;
+  gap: 6px;
+  text-align: right;
+  justify-items: end;
+}
+
+.expansion-item__status small {
+  color: var(--color-muted);
+}
+
+.expansion-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.parts-table {
+  overflow-x: auto;
+}
+
+.parts-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.parts-table th,
+.parts-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.parts-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.parts-table tbody tr:hover {
+  background: rgba(226, 237, 255, 0.4);
+}
+
+.parts-table tbody tr.is-selected {
+  background: rgba(14, 159, 110, 0.08);
+}
+
+.parts-status {
+  display: inline-flex;
+  margin-bottom: 6px;
+}
+
+.parts-detail {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(320px, 1fr) 320px;
+}
+
+.parts-detail__item {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: var(--radius-medium);
+  padding: 14px 16px;
+  background: rgba(248, 250, 255, 0.9);
+  display: grid;
+  gap: 10px;
+}
+
+.parts-detail__status {
+  display: grid;
+  gap: 4px;
+  align-items: start;
+}
+
+.parts-detail__quotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.parts-detail__sidebar {
+  display: grid;
+  gap: 20px;
+}
+
+.parts-detail__sidebar section {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: var(--radius-medium);
+  padding: 16px;
+  background: rgba(248, 250, 255, 0.95);
+  display: grid;
+  gap: 12px;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.parts-timeline {
+  margin-top: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.parts-footer {
+  margin-top: 20px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  padding-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.parts-footer p {
+  max-width: 520px;
+  color: var(--color-muted);
+}
+
+.parts-footer__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 1024px) {
   .sidebar {
     display: none;
@@ -822,6 +1030,14 @@ a {
   .topbar__actions {
     justify-content: space-between;
   }
+
+  .parts-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 680px) {
@@ -836,5 +1052,23 @@ a {
 
   .kanban {
     grid-template-columns: 1fr;
+  }
+
+  .perito-item,
+  .expansion-item,
+  .document-summary__item {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .expansion-item__status {
+    justify-items: flex-start;
+    text-align: left;
+  }
+
+  .parts-footer {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

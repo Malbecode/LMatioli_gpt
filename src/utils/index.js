@@ -9,6 +9,8 @@ export function cloneClaims(list) {
     followUps: claim.followUps ? claim.followUps.map((f) => ({ ...f })) : [],
     attachments: claim.attachments ? claim.attachments.map((a) => ({ ...a })) : [],
     tasks: claim.tasks ? claim.tasks.map((t) => ({ ...t })) : [],
+    documentation: claim.documentation ? claim.documentation.map((doc) => ({ ...doc })) : [],
+    expansions: claim.expansions ? claim.expansions.map((expansion) => ({ ...expansion })) : [],
   }));
 }
 

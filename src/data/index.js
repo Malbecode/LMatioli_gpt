@@ -213,6 +213,243 @@ export const notifications = [
   },
 ];
 
+export const peritoInspections = [
+  {
+    claimId: 'SIN-2024-001',
+    link: 'https://app.lmattioli.com/peritos/SIN-2024-001',
+    scheduled: '2024-06-06T10:00:00',
+    inspector: 'Carlos Pereyra',
+    lastUpdate: '2024-06-06T15:10:00',
+    observations:
+      'Daños visibles en lateral izquierdo con deformación en puertas delantera y trasera. Se recomienda reparación con bancada.',
+    damages: [
+      { area: 'Puerta delantera izquierda', severity: 'Media', action: 'Chapa y pintura' },
+      { area: 'Guardabarros delantero', severity: 'Alta', action: 'Reemplazo' },
+    ],
+    labor: { bodyworkDays: 3, paintPanels: 4 },
+    parts: [
+      { name: 'Guardabarros delantero izquierdo', action: 'Reemplazo', status: 'Cotización' },
+      { name: 'Moldura lateral', action: 'Reposición', status: 'Incluido en stock' },
+    ],
+    photos: 12,
+  },
+  {
+    claimId: 'SIN-2024-002',
+    link: 'https://app.lmattioli.com/peritos/SIN-2024-002',
+    scheduled: '2024-05-30T14:30:00',
+    inspector: 'Mariana Ledesma',
+    lastUpdate: '2024-06-05T11:45:00',
+    observations:
+      'Robo parcial confirmado. Faltan rueda delantera derecha y espejos. Sensor ABS presenta cableado dañado.',
+    damages: [
+      { area: 'Rueda delantera derecha', severity: 'Alta', action: 'Reposición completa' },
+      { area: 'Sensor ABS', severity: 'Media', action: 'Reemplazo y calibración' },
+    ],
+    labor: { bodyworkDays: 0, paintPanels: 0 },
+    parts: [
+      { name: 'Rueda completa 18"', action: 'Compra', status: 'Encargado' },
+      { name: 'Juego de espejos', action: 'Compra', status: 'No disponible' },
+    ],
+    photos: 8,
+  },
+  {
+    claimId: 'SIN-2024-003',
+    link: 'https://app.lmattioli.com/peritos/SIN-2024-003',
+    scheduled: '2024-05-20T09:00:00',
+    inspector: 'Rodolfo Benítez',
+    lastUpdate: '2024-05-21T18:20:00',
+    observations:
+      'Impacto frontal leve. Radiador sin pérdida. Requiere alineación y calibración de ADAS.',
+    damages: [
+      { area: 'Paragolpes delantero', severity: 'Media', action: 'Reparación' },
+      { area: 'Soporte de sensor ADAS', severity: 'Media', action: 'Reemplazo' },
+    ],
+    labor: { bodyworkDays: 2, paintPanels: 2 },
+    parts: [
+      { name: 'Soporte sensor ADAS', action: 'Pedido', status: 'Comprado' },
+      { name: 'Grapas paragolpes', action: 'Pedido', status: 'Entregado' },
+    ],
+    photos: 6,
+  },
+];
+
+export const partsTracking = [
+  {
+    claimId: 'SIN-2024-001',
+    vehicle: 'Toyota Corolla XEi 2022',
+    workshop: 'Taller Central',
+    consorcio: 'Consorcio Norte',
+    status: 'cotizacion',
+    statusLabel: 'En cotización',
+    lastUpdate: '2024-06-11T09:30:00',
+    nextStep: 'Aprobar cotización y emitir orden de compra',
+    dueDate: '2024-06-14',
+    contact: { name: 'María García', phone: '+54 11 4567-2311' },
+    parts: [
+      {
+        name: 'Guardabarros delantero izquierdo',
+        action: 'Reemplazo',
+        status: 'Cotizado',
+        supplierQuotes: [
+          { provider: 'Repuestera Norte', price: '$120.000', eta: '48 hs' },
+          { provider: 'Autopartes Delta', price: '$118.500', eta: '72 hs' },
+        ],
+        approvedProvider: 'Autopartes Delta',
+        expectedDate: '2024-06-13',
+        notes: 'Proveedor solicita seña del 30% para reservar.',
+      },
+      {
+        name: 'Kit molduras laterales',
+        action: 'Reposición',
+        status: 'Encargado',
+        supplierQuotes: [{ provider: 'LM Stock interno', price: '$35.000', eta: '24 hs' }],
+        approvedProvider: 'LM Stock interno',
+        expectedDate: '2024-06-12',
+        notes: 'Salida desde depósito Pilar.',
+      },
+    ],
+    adjustments: [
+      {
+        date: '2024-06-10',
+        description: 'Proveedor Delta actualizó tarifa en 5% por variación del dólar.',
+        impact: '+$5.925',
+        approvedBy: 'Martín Cabrera',
+      },
+    ],
+    expansions: [
+      {
+        date: '2024-06-07',
+        detail: 'Se detectó daño oculto en faro izquierdo.',
+        status: 'En revisión con consorcio',
+      },
+    ],
+    timeline: [
+      { date: '2024-06-05', label: 'Solicitud enviada a proveedores' },
+      { date: '2024-06-06', label: 'Recepción de cotizaciones' },
+      { date: '2024-06-10', label: 'Ajuste de tarifa informado' },
+    ],
+  },
+  {
+    claimId: 'SIN-2024-002',
+    vehicle: 'Ford Kuga SEL 2021',
+    workshop: 'Carrocerías del Sur',
+    consorcio: 'Consorcio Sur',
+    status: 'encargado',
+    statusLabel: 'Repuestos encargados',
+    lastUpdate: '2024-06-10T16:00:00',
+    nextStep: 'Confirmar entrega parcial y gestionar piezas faltantes',
+    dueDate: '2024-06-18',
+    contact: { name: 'Gonzalo Ferreyra', phone: '+54 11 4233-3344' },
+    parts: [
+      {
+        name: 'Rueda completa 18"',
+        action: 'Compra',
+        status: 'Encargado',
+        supplierQuotes: [
+          { provider: 'Neumáticos Ruta', price: '$210.000', eta: '5 días' },
+          { provider: 'Ruedas Express', price: '$215.500', eta: '3 días' },
+        ],
+        approvedProvider: 'Ruedas Express',
+        expectedDate: '2024-06-14',
+        notes: 'Proveedor requiere pago anticipado.',
+      },
+      {
+        name: 'Juego de espejos laterales',
+        action: 'Compra',
+        status: 'No disponible',
+        supplierQuotes: [
+          { provider: 'Autopartes Sur', price: '$89.000', eta: 'Sin stock' },
+          { provider: 'Importadora Andes', price: 'En gestión', eta: '7-10 días' },
+        ],
+        approvedProvider: 'Importadora Andes',
+        expectedDate: '2024-06-19',
+        notes: 'Se evalúa alternativa nacional si no llega importación.',
+      },
+      {
+        name: 'Sensor ABS delantero',
+        action: 'Compra',
+        status: 'Comprado',
+        supplierQuotes: [{ provider: 'Electrocar', price: '$58.000', eta: '48 hs' }],
+        approvedProvider: 'Electrocar',
+        expectedDate: '2024-06-12',
+        notes: 'Confirmar calibración una vez instalado.',
+      },
+    ],
+    adjustments: [
+      {
+        date: '2024-06-09',
+        description: 'Aumento 12% en rueda importada. Se gestiona nota de crédito con consorcio.',
+        impact: '+$22.680',
+        approvedBy: 'Laura Mattioli',
+      },
+      {
+        date: '2024-06-11',
+        description: 'Proveedor ofrece alternativa nacional (-8%). En análisis.',
+        impact: '-$7.120',
+        approvedBy: 'Pendiente',
+      },
+    ],
+    expansions: [
+      {
+        date: '2024-06-05',
+        detail: 'Cableado ABS cortado detectado durante diagnóstico.',
+        status: 'Aprobado para reposición',
+      },
+    ],
+    timeline: [
+      { date: '2024-05-31', label: 'Cotización aprobada por consorcio' },
+      { date: '2024-06-03', label: 'Orden de compra emitida' },
+      { date: '2024-06-08', label: 'Proveedor confirmó despacho' },
+    ],
+  },
+  {
+    claimId: 'SIN-2024-003',
+    vehicle: 'Chevrolet Tracker Premier 2023',
+    workshop: 'Elite Motors',
+    consorcio: 'Consorcio Premium',
+    status: 'entregado',
+    statusLabel: 'Repuestos entregados',
+    lastUpdate: '2024-06-07T13:00:00',
+    nextStep: 'Verificar reparación y preparar cierre',
+    dueDate: '2024-06-12',
+    contact: { name: 'Sofía Morales', phone: '+54 11 4878-1211' },
+    parts: [
+      {
+        name: 'Paragolpes delantero',
+        action: 'Reparación',
+        status: 'Entregado',
+        supplierQuotes: [{ provider: 'Servicio Elite', price: '$74.000', eta: 'Listo' }],
+        approvedProvider: 'Servicio Elite',
+        expectedDate: '2024-06-07',
+        notes: 'Recibido y en reparación de pintura.',
+      },
+      {
+        name: 'Soporte sensor ADAS',
+        action: 'Reemplazo',
+        status: 'Comprado',
+        supplierQuotes: [{ provider: 'ADAS Parts', price: '$132.000', eta: '72 hs' }],
+        approvedProvider: 'ADAS Parts',
+        expectedDate: '2024-06-10',
+        notes: 'Coordinar calibración posterior.',
+      },
+    ],
+    adjustments: [
+      {
+        date: '2024-06-02',
+        description: 'Aplicado descuento 5% por convenio premium.',
+        impact: '-$10.200',
+        approvedBy: 'Sofía Morales',
+      },
+    ],
+    expansions: [],
+    timeline: [
+      { date: '2024-05-28', label: 'Cotización confirmada' },
+      { date: '2024-05-30', label: 'Compra aprobada' },
+      { date: '2024-06-04', label: 'Entrega parcial' },
+    ],
+  },
+];
+
 export const catalogSummary = {
   roles: [
     { name: 'Admin', permissions: ['Gestiona catálogos', 'Define reglas', 'Gestiona usuarios'] },
@@ -245,6 +482,41 @@ export const claims = [
     assignedPerson: 'María García',
     inspectionDate: '2024-06-06',
     fastTrackNotes: '',
+    documentation: [
+      { id: 'factura-repuestos', label: 'Factura compra repuestos', status: 'pendiente', lastUpdate: null, notes: '' },
+      { id: 'factura-taller', label: 'Factura taller', status: 'pendiente', lastUpdate: null, notes: '' },
+      { id: 'factura-abogado', label: 'Factura abogado', status: 'no-aplica', lastUpdate: null, notes: 'Solo si interviene recupero.' },
+      {
+        id: 'comprobante-pago',
+        label: 'Comprobante de pago',
+        status: 'en-proceso',
+        lastUpdate: '2024-06-05T15:45:00',
+        notes: 'Pago parcial pendiente de confirmación bancaria.',
+      },
+      {
+        id: 'informe-perito',
+        label: 'Informe del perito',
+        status: 'completo',
+        lastUpdate: '2024-06-06T15:10:00',
+        notes: 'Informe cargado por Carlos Pereyra.',
+      },
+      { id: 'fotos', label: 'Fotos del siniestro', status: 'completo', lastUpdate: '2024-06-05T12:00:00', notes: '' },
+      {
+        id: 'observaciones',
+        label: 'Observaciones / Notas',
+        status: 'en-proceso',
+        lastUpdate: '2024-06-05T15:45:00',
+        notes: 'Esperando respuesta del asegurado.',
+      },
+    ],
+    expansions: [
+      {
+        date: '2024-06-07',
+        detail: 'Se detectó daño oculto en faro izquierdo durante desmontaje.',
+        status: 'En revisión con consorcio',
+        impact: 'Agregar repuesto y 1 día de taller.',
+      },
+    ],
     history: [
       {
         date: '2024-06-03T09:10:00',
@@ -304,6 +576,59 @@ export const claims = [
     assignedPerson: 'Gonzalo Ferreyra',
     inspectionDate: '2024-05-30',
     fastTrackNotes: '',
+    documentation: [
+      {
+        id: 'factura-repuestos',
+        label: 'Factura compra repuestos',
+        status: 'en-proceso',
+        lastUpdate: '2024-06-09T10:00:00',
+        notes: 'Aguardando nota de crédito por ajuste.',
+      },
+      {
+        id: 'factura-taller',
+        label: 'Factura taller',
+        status: 'pendiente',
+        lastUpdate: null,
+        notes: 'Se emitirá al finalizar reparación.',
+      },
+      {
+        id: 'remitos',
+        label: 'Remitos de recepción',
+        status: 'en-proceso',
+        lastUpdate: '2024-06-08T16:00:00',
+        notes: 'Falta remito de Importadora Andes.',
+      },
+      {
+        id: 'comprobante-pago',
+        label: 'Comprobante de pago',
+        status: 'pendiente',
+        lastUpdate: null,
+        notes: 'Pago anticipado pendiente de autorización.',
+      },
+      {
+        id: 'informe-perito',
+        label: 'Informe del perito',
+        status: 'completo',
+        lastUpdate: '2024-05-30T18:00:00',
+        notes: 'Inspección Mariana Ledesma.',
+      },
+      { id: 'fotos', label: 'Fotos del siniestro', status: 'completo', lastUpdate: '2024-05-30T18:05:00', notes: '' },
+      {
+        id: 'observaciones',
+        label: 'Observaciones / Notas',
+        status: 'en-proceso',
+        lastUpdate: '2024-06-05T09:12:00',
+        notes: 'Demora en espejos importados.',
+      },
+    ],
+    expansions: [
+      {
+        date: '2024-06-05',
+        detail: 'Cableado ABS cortado detectado durante inspección taller.',
+        status: 'Aprobado para reposición',
+        impact: 'Sumar repuesto y calibración.',
+      },
+    ],
     history: [
       {
         date: '2024-05-29T10:24:00',
@@ -365,6 +690,40 @@ export const claims = [
     assignedPerson: 'Julieta López',
     inspectionDate: null,
     fastTrackNotes: 'Cliente aceptó reparación express en fast track.',
+    documentation: [
+      {
+        id: 'factura-repuestos',
+        label: 'Factura compra repuestos',
+        status: 'completo',
+        lastUpdate: '2024-05-30T11:00:00',
+        notes: 'Factura ADAS Parts 00231.',
+      },
+      {
+        id: 'factura-taller',
+        label: 'Factura taller',
+        status: 'en-proceso',
+        lastUpdate: '2024-06-06T17:30:00',
+        notes: 'Cierre previsto con entrega final.',
+      },
+      { id: 'remitos', label: 'Remitos de recepción', status: 'completo', lastUpdate: '2024-06-04T13:00:00', notes: '' },
+      { id: 'comprobante-pago', label: 'Comprobante de pago', status: 'pendiente', lastUpdate: null, notes: '' },
+      {
+        id: 'informe-perito',
+        label: 'Informe del perito',
+        status: 'completo',
+        lastUpdate: '2024-05-21T18:20:00',
+        notes: 'Incluye calibración ADAS.',
+      },
+      { id: 'fotos', label: 'Fotos del siniestro', status: 'completo', lastUpdate: '2024-05-21T18:25:00', notes: '' },
+      {
+        id: 'observaciones',
+        label: 'Observaciones / Notas',
+        status: 'en-proceso',
+        lastUpdate: '2024-05-27T11:00:00',
+        notes: 'Esperando confirmación de calibración.',
+      },
+    ],
+    expansions: [],
     history: [
       {
         date: '2024-05-20T10:42:00',
@@ -421,6 +780,28 @@ export const claims = [
     assignedPerson: null,
     inspectionDate: null,
     fastTrackNotes: '',
+    documentation: [
+      {
+        id: 'factura-repuestos',
+        label: 'Factura compra repuestos',
+        status: 'pendiente',
+        lastUpdate: null,
+        notes: 'Se definirá si aplica tras inspección.',
+      },
+      {
+        id: 'factura-taller',
+        label: 'Factura taller',
+        status: 'pendiente',
+        lastUpdate: null,
+        notes: 'A definir taller.',
+      },
+      { id: 'remitos', label: 'Remitos de recepción', status: 'pendiente', lastUpdate: null, notes: '' },
+      { id: 'comprobante-pago', label: 'Comprobante de pago', status: 'pendiente', lastUpdate: null, notes: '' },
+      { id: 'informe-perito', label: 'Informe del perito', status: 'pendiente', lastUpdate: null, notes: '' },
+      { id: 'fotos', label: 'Fotos del siniestro', status: 'pendiente', lastUpdate: null, notes: '' },
+      { id: 'observaciones', label: 'Observaciones / Notas', status: 'pendiente', lastUpdate: null, notes: '' },
+    ],
+    expansions: [],
     history: [
       {
         date: '2024-06-08T08:22:00',
@@ -460,6 +841,45 @@ export const claims = [
     assignedPerson: 'Julieta López',
     inspectionDate: null,
     fastTrackNotes: 'Liquidación automática y reintegro a la asegurada.',
+    documentation: [
+      {
+        id: 'factura-repuestos',
+        label: 'Factura compra repuestos',
+        status: 'no-aplica',
+        lastUpdate: '2024-05-03T10:22:00',
+        notes: 'Caso fast track sin intervención de taller.',
+      },
+      {
+        id: 'factura-taller',
+        label: 'Factura taller',
+        status: 'no-aplica',
+        lastUpdate: '2024-05-03T10:22:00',
+        notes: '',
+      },
+      {
+        id: 'comprobante-pago',
+        label: 'Comprobante de pago',
+        status: 'completo',
+        lastUpdate: '2024-05-15T16:01:00',
+        notes: 'Transferencia realizada a la asegurada.',
+      },
+      {
+        id: 'informe-perito',
+        label: 'Informe del perito',
+        status: 'completo',
+        lastUpdate: '2024-05-06T11:55:00',
+        notes: 'Revisión digital fast track.',
+      },
+      { id: 'fotos', label: 'Fotos del siniestro', status: 'completo', lastUpdate: '2024-05-03T10:22:00', notes: '' },
+      {
+        id: 'observaciones',
+        label: 'Observaciones / Notas',
+        status: 'completo',
+        lastUpdate: '2024-05-13T09:10:00',
+        notes: 'Consorcio aprobó reintegro.',
+      },
+    ],
+    expansions: [],
     history: [
       {
         date: '2024-05-03T10:22:00',
