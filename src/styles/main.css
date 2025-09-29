@@ -710,6 +710,16 @@ a {
   min-height: 100px;
 }
 
+.concepts-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.concepts-grid select {
+  width: 100%;
+}
+
 .file-input {
   border: 2px dashed rgba(0, 68, 170, 0.2);
   padding: 16px;
@@ -738,9 +748,19 @@ a {
   color: #312e81;
 }
 
+.badge--type {
+  background: rgba(14, 116, 144, 0.18);
+  color: #0f4c81;
+}
+
 .badge--claim {
   background: rgba(14, 159, 110, 0.16);
   color: var(--color-accent);
+}
+
+.badge--invoice {
+  background: rgba(234, 179, 8, 0.2);
+  color: #b45309;
 }
 
 .task-list {
@@ -909,6 +929,18 @@ a {
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
+}
+
+.parts-table--inline {
+  overflow-x: auto;
+}
+
+.parts-table--inline table {
+  min-width: 0;
+}
+
+.parts-table--inline tfoot th {
+  text-align: right;
 }
 
 .parts-table th,

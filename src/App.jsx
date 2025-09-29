@@ -13,6 +13,10 @@ import {
   catalogSummary,
   peritoInspections as initialPeritoInspections,
   partsTracking as initialPartsTracking,
+  claimTypeOptions,
+  recoveryTypeOptions,
+  creditorTypeOptions,
+  stroConceptOptions,
 } from './data/index.js';
 import {
   STATUS_ORDER,
@@ -276,12 +280,18 @@ function App() {
       plate: '',
       dni: '',
       name: '',
+      brand: '',
+      model: '',
       eventDate: '',
       reportDate: toDateInput(new Date()),
       description: '',
       consorcioFlag: false,
       consorcioOption: '',
       hasRecovery: false,
+      stroNumber: '',
+      repairNumber: '',
+      claimType: claimTypeOptions[0],
+      recoveryType: recoveryTypeOptions[0],
       workshop: '',
       workshopName: '',
       assignedPerson: '',
@@ -290,6 +300,11 @@ function App() {
       fastTrackNotes: '',
       closeDirectly: false,
       attachments: [],
+      creditorType: creditorTypeOptions[0],
+      creditorName: '',
+      hasInvoice: false,
+      otherConcepts: ['', '', ''],
+      partsDetail: [],
     };
     setModal({ type: 'new-claim', data: { draft } });
   };
@@ -813,11 +828,12 @@ function SiniestrosModule({
               </select>
             </label>
             <label className="input-field input-field--compact">
-              <span>Reclamo</span>
+              <span>Reclamo / Recupero</span>
               <select name="claim" value={filters.claim} onChange={handleChange}>
                 <option value="todos">Todos</option>
-                <option value="si">Sí</option>
-                <option value="no">No</option>
+                <option value="reclamo">Reclamo</option>
+                <option value="recupero">Recupero</option>
+                <option value="ninguno">Sin gestión</option>
               </select>
             </label>
             <label className="input-field input-field--compact">
@@ -873,9 +889,13 @@ function SiniestrosModule({
                         </div>
                         <p>{claim.stage}</p>
                         <div className="kanban-card__meta">
+                          {claim.claimType && <span className="badge badge--type">{claim.claimType}</span>}
                           {claim.consorcioFlag && <span className="badge badge--consorcio">{claim.consorcio}</span>}
                           {claim.workshopName && <span className="badge badge--workshop">{claim.workshopName}</span>}
-                          {claim.hasRecovery && <span className="badge badge--claim">Con reclamo</span>}
+                          {claim.recoveryType && claim.recoveryType !== 'Ninguno' && (
+                            <span className="badge badge--claim">{claim.recoveryType}</span>
+                          )}
+                          {claim.hasInvoice && <span className="badge badge--invoice">Factura</span>}
                         </div>
                         <div className="kanban-card__meta">
                           <span>Última actualización: {formatRelativeDate(claim.lastUpdate)}</span>
@@ -1066,8 +1086,38 @@ function ConsultasModule({ insuredDirectory }) {
   };
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setForm((prev) => {
+      if (name.startsWith('otherConcepts')) {
+        const index = Number(name.replace('otherConcepts', ''));
+        const concepts = [...prev.otherConcepts];
+        concepts[index] = value;
+        return { ...prev, otherConcepts: concepts };
+      }
+      if (name === 'hasInvoice') {
+        return { ...prev, hasInvoice: checked };
+      }
+      if (name === 'workshop') {
+        const selected = workshops.find((item) => item.id === value);
+        const nextState = { ...prev, workshop: value };
+        if (prev.creditorType === 'Taller') {
+          nextState.creditorName = selected?.name || '';
+        }
+        return nextState;
+      }
+      if (name === 'creditorType') {
+        const nextType = value;
+        let nextName = prev.creditorName;
+        if (nextType === 'Taller') {
+          const selected = workshops.find((item) => item.id === (prev.workshop || claim.workshop));
+          nextName = selected?.name || '';
+        } else if (nextType === 'Particular') {
+          nextName = claim?.name || '';
+        }
+        return { ...prev, creditorType: nextType, creditorName: nextName };
+      }
+      return { ...prev, [name]: type === 'checkbox' ? checked : value };
+    });
   };
 
   return (
@@ -1667,33 +1717,75 @@ function ChangePasswordModal({ onClose, onSubmit }) {
 }
 
 function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask, onAddAttachments, workshops }) {
-  const [form, setForm] = useState({
-    state: claim?.state ?? 'Ingreso',
-    stage: claim?.stage || '',
-    workshop: claim?.workshop || '',
-    assignedPerson: claim?.assignedPerson || '',
-    inspectionDate: claim?.inspectionDate ? toDateInput(claim.inspectionDate) : '',
-    fastTrackNotes: claim?.fastTrackNotes || '',
+  const createFormFromClaim = (currentClaim) => ({
+    state: currentClaim?.state ?? 'Ingreso',
+    stage: currentClaim?.stage || '',
+    workshop: currentClaim?.workshop || '',
+    assignedPerson: currentClaim?.assignedPerson || '',
+    inspectionDate: currentClaim?.inspectionDate ? toDateInput(currentClaim.inspectionDate) : '',
+    fastTrackNotes: currentClaim?.fastTrackNotes || '',
+    claimType: currentClaim?.claimType || claimTypeOptions[0],
+    stroNumber: currentClaim?.stroNumber || '',
+    repairNumber: currentClaim?.repairNumber || '',
+    recoveryType: currentClaim?.recoveryType || recoveryTypeOptions[0],
+    creditorType: currentClaim?.creditorType || creditorTypeOptions[0],
+    creditorName:
+      currentClaim?.creditorName ||
+      (currentClaim?.creditorType === 'Taller'
+        ? currentClaim?.workshopName || ''
+        : currentClaim?.creditorType === 'Particular'
+        ? currentClaim?.name || ''
+        : ''),
+    hasInvoice: Boolean(currentClaim?.hasInvoice),
+    otherConcepts: [
+      currentClaim?.otherConcepts?.[0] || '',
+      currentClaim?.otherConcepts?.[1] || '',
+      currentClaim?.otherConcepts?.[2] || '',
+    ],
   });
+  const [form, setForm] = useState(() => createFormFromClaim(claim));
   const [comment, setComment] = useState('');
 
   useEffect(() => {
     if (!claim) return;
-    setForm({
-      state: claim.state,
-      stage: claim.stage || '',
-      workshop: claim.workshop || '',
-      assignedPerson: claim.assignedPerson || '',
-      inspectionDate: claim.inspectionDate ? toDateInput(claim.inspectionDate) : '',
-      fastTrackNotes: claim.fastTrackNotes || '',
-    });
+    setForm(createFormFromClaim(claim));
   }, [claim]);
 
   if (!claim) return null;
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setForm((prev) => {
+      if (name.startsWith('otherConcepts')) {
+        const index = Number(name.replace('otherConcepts', ''));
+        const concepts = [...prev.otherConcepts];
+        concepts[index] = value;
+        return { ...prev, otherConcepts: concepts };
+      }
+      if (name === 'hasInvoice') {
+        return { ...prev, hasInvoice: checked };
+      }
+      if (name === 'workshop') {
+        const selected = workshops.find((item) => item.id === value);
+        const nextState = { ...prev, workshop: value };
+        if (prev.creditorType === 'Taller') {
+          nextState.creditorName = selected?.name || '';
+        }
+        return nextState;
+      }
+      if (name === 'creditorType') {
+        const nextType = value;
+        let nextName = prev.creditorName;
+        if (nextType === 'Taller') {
+          const selected = workshops.find((item) => item.id === (prev.workshop || claim.workshop));
+          nextName = selected?.name || '';
+        } else if (nextType === 'Particular') {
+          nextName = claim?.name || '';
+        }
+        return { ...prev, creditorType: nextType, creditorName: nextName };
+      }
+      return { ...prev, [name]: type === 'checkbox' ? checked : value };
+    });
   };
 
   const alert = getAlertLevel(claim);
@@ -1727,6 +1819,18 @@ function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask,
     return { label: status, className: 'tag' };
   };
 
+  const parts = claim?.partsDetail ?? [];
+  const totalParts = parts.reduce((acc, part) => {
+    const total = part.total ?? Number(part.unitPrice || 0) * Number(part.quantity || 0);
+    return acc + Number(total || 0);
+  }, 0);
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2,
+    }).format(Number(value || 0));
+
   return (
     <Modal
       title={`Detalle del siniestro ${claim.id}`}
@@ -1750,7 +1854,13 @@ function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask,
             <small>
               DNI {claim.dni} · Patente {claim.plate}
             </small>
+            <small>
+              Vehículo: {claim.brand ? `${claim.brand} ${claim.model}` : 'Sin información registrada'}
+            </small>
             <small>Consorcio: {claim.consorcio || 'Sin consorcio'}</small>
+            <small>
+              Fecha de siniestro: {formatDate(claim.eventDate)} · Denuncia: {formatDate(claim.reportDate)}
+            </small>
           </div>
         </div>
         <div>
@@ -1776,6 +1886,114 @@ function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask,
               />
             </label>
             <span className={badgeClass}>{alert.message}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="detail-grid">
+        <div>
+          <p className="section-title">Identificación del siniestro</p>
+          <div className="history-item">
+            <label className="input-field">
+              <span>Tipo de siniestro</span>
+              <select name="claimType" value={form.claimType} onChange={handleChange}>
+                {claimTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="input-field">
+              <span>Número STR0</span>
+              <input
+                name="stroNumber"
+                value={form.stroNumber}
+                onChange={handleChange}
+                placeholder="15707"
+              />
+            </label>
+            <label className="input-field">
+              <span>Número de reparación</span>
+              <input
+                name="repairNumber"
+                value={form.repairNumber}
+                onChange={handleChange}
+                placeholder="00000"
+              />
+            </label>
+          </div>
+        </div>
+        <div>
+          <p className="section-title">Reclamo y pagos</p>
+          <div className="history-item">
+            <label className="input-field">
+              <span>Reclamo / Recupero</span>
+              <select name="recoveryType" value={form.recoveryType} onChange={handleChange}>
+                {recoveryTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="input-field">
+              <span>Tipo de acreedor</span>
+              <select name="creditorType" value={form.creditorType} onChange={handleChange}>
+                {creditorTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {form.creditorType === 'Taller' ? (
+              <label className="input-field">
+                <span>Taller acreedor</span>
+                <select name="creditorName" value={form.creditorName} onChange={handleChange}>
+                  <option value="">Selecciona taller</option>
+                  {workshops.map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label className="input-field">
+                <span>Acreedor</span>
+                <input
+                  name="creditorName"
+                  value={form.creditorName}
+                  onChange={handleChange}
+                  placeholder="Nombre / razón social"
+                />
+              </label>
+            )}
+            <label className="input-field">
+              <span>Factura recibida</span>
+              <input type="checkbox" name="hasInvoice" checked={form.hasInvoice} onChange={handleChange} />
+            </label>
+            <div className="input-field">
+              <span>Otros conceptos STR0</span>
+              <div className="concepts-grid">
+                {form.otherConcepts.map((concept, index) => (
+                  <select
+                    key={index}
+                    name={`otherConcepts${index}`}
+                    value={concept}
+                    onChange={handleChange}
+                  >
+                    <option value="">Sin definir</option>
+                    {stroConceptOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1843,6 +2061,44 @@ function ClaimDetailModal({ claim, onClose, onSave, onAddFollowUp, onToggleTask,
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div>
+        <p className="section-title">Detalle de repuestos</p>
+        <div className="parts-table parts-table--inline">
+          {parts.length === 0 ? (
+            <p className="form-helper">No hay repuestos registrados para este siniestro.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Cantidad</th>
+                  <th>Valor individual</th>
+                  <th>Valor total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map((part, index) => (
+                  <tr key={`${part.code || index}-${index}`}>
+                    <td>{part.code || '-'}</td>
+                    <td>{part.description}</td>
+                    <td>{part.quantity}</td>
+                    <td>{formatCurrency(part.unitPrice)}</td>
+                    <td>{formatCurrency(part.total ?? part.unitPrice * part.quantity)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th colSpan={4}>Total</th>
+                  <th>{formatCurrency(totalParts)}</th>
+                </tr>
+              </tfoot>
+            </table>
+          )}
         </div>
       </div>
 
@@ -2020,6 +2276,12 @@ function NewClaimModal({
         case 'name':
           next.name = value;
           break;
+        case 'brand':
+          next.brand = value;
+          break;
+        case 'model':
+          next.model = value;
+          break;
         case 'eventDate':
           next.eventDate = value;
           setDuplicates(detectDuplicates(existingClaims, { ...next }));
@@ -2039,8 +2301,18 @@ function NewClaimModal({
         case 'consorcioOption':
           next.consorcioOption = value;
           break;
-        case 'hasRecovery':
-          next.hasRecovery = checked;
+        case 'claimType':
+          next.claimType = value;
+          break;
+        case 'stroNumber':
+          next.stroNumber = value;
+          break;
+        case 'repairNumber':
+          next.repairNumber = value;
+          break;
+        case 'recoveryType':
+          next.recoveryType = value;
+          next.hasRecovery = value !== 'Ninguno';
           break;
         case 'workshop':
           next.workshop = value;
@@ -2052,6 +2324,9 @@ function NewClaimModal({
             if (suggested) {
               next.assignedPerson = suggested.name;
             }
+          }
+          if (next.creditorType === 'Taller') {
+            next.creditorName = next.workshopName;
           }
           break;
         case 'assignedPerson':
@@ -2065,6 +2340,9 @@ function NewClaimModal({
           if (checked) {
             next.workshop = '';
             next.workshopName = '';
+            if (next.creditorType === 'Taller') {
+              next.creditorName = '';
+            }
           }
           break;
         case 'closeDirectly':
@@ -2073,6 +2351,31 @@ function NewClaimModal({
         case 'fastTrackNotes':
           next.fastTrackNotes = value;
           break;
+        case 'creditorType':
+          next.creditorType = value;
+          if (value === 'Taller') {
+            next.creditorName = next.workshopName;
+          } else if (value === 'Particular') {
+            next.creditorName = next.name;
+          } else {
+            next.creditorName = '';
+          }
+          break;
+        case 'creditorName':
+          next.creditorName = value;
+          break;
+        case 'hasInvoice':
+          next.hasInvoice = checked;
+          break;
+        case 'otherConcepts0':
+        case 'otherConcepts1':
+        case 'otherConcepts2': {
+          const index = Number(name.replace('otherConcepts', ''));
+          const concepts = [...(next.otherConcepts || ['', '', ''])];
+          concepts[index] = value;
+          next.otherConcepts = concepts;
+          break;
+        }
         case 'attachments':
           next.attachments = Array.from(files || []).map((file) => ({
             name: file.name,
@@ -2100,6 +2403,8 @@ function NewClaimModal({
         ...prev,
         name: match.name,
         dni: match.dni,
+        brand: match.vehicle.brand,
+        model: match.vehicle.model,
         consorcioFlag: true,
         consorcioOption: consortia.find((item) => item.name === match.vehicle.consorcio)?.id || '',
       }));
@@ -2188,6 +2493,14 @@ function NewClaimModal({
             <input name="name" value={draft.name} onChange={updateDraft} placeholder="Nombre completo" required />
           </label>
           <label className="input-field">
+            <span>Marca</span>
+            <input name="brand" value={draft.brand} onChange={updateDraft} placeholder="Marca del vehículo" />
+          </label>
+          <label className="input-field">
+            <span>Modelo</span>
+            <input name="model" value={draft.model} onChange={updateDraft} placeholder="Modelo" />
+          </label>
+          <label className="input-field">
             <span>Fecha de siniestro</span>
             <input type="date" name="eventDate" value={draft.eventDate} onChange={updateDraft} required />
           </label>
@@ -2251,8 +2564,32 @@ function NewClaimModal({
             </select>
           </label>
           <label className="input-field">
-            <span>¿Genera reclamo a terceros?</span>
-            <input type="checkbox" name="hasRecovery" checked={draft.hasRecovery} onChange={updateDraft} />
+            <span>Tipo de siniestro</span>
+            <select name="claimType" value={draft.claimType} onChange={updateDraft}>
+              {claimTypeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="input-field">
+            <span>Número STR0</span>
+            <input name="stroNumber" value={draft.stroNumber} onChange={updateDraft} placeholder="15707" />
+          </label>
+          <label className="input-field">
+            <span>Número de reparación</span>
+            <input name="repairNumber" value={draft.repairNumber} onChange={updateDraft} placeholder="00000" />
+          </label>
+          <label className="input-field">
+            <span>Reclamo / Recupero</span>
+            <select name="recoveryType" value={draft.recoveryType} onChange={updateDraft}>
+              {recoveryTypeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="input-field" style={{ gridColumn: '1 / -1' }}>
             <span>Notas / Detalles adicionales</span>
@@ -2293,6 +2630,63 @@ function NewClaimModal({
             <span>Persona a cargo</span>
             <input name="assignedPerson" value={draft.assignedPerson} onChange={updateDraft} placeholder="Nombre" />
           </label>
+          <label className="input-field">
+            <span>Tipo de acreedor</span>
+            <select name="creditorType" value={draft.creditorType} onChange={updateDraft}>
+              {creditorTypeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          {draft.creditorType === 'Taller' ? (
+            <label className="input-field">
+              <span>Taller acreedor</span>
+              <select name="creditorName" value={draft.creditorName} onChange={updateDraft}>
+                <option value="">Selecciona taller</option>
+                {workshops.map((item) => (
+                  <option key={item.id} value={item.name}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label className="input-field">
+              <span>Acreedor</span>
+              <input
+                name="creditorName"
+                value={draft.creditorName}
+                onChange={updateDraft}
+                placeholder="Nombre / razón social"
+              />
+            </label>
+          )}
+          <label className="input-field">
+            <span>Factura recibida</span>
+            <input type="checkbox" name="hasInvoice" checked={draft.hasInvoice} onChange={updateDraft} />
+          </label>
+          <div className="input-field" style={{ gridColumn: '1 / -1' }}>
+            <span>Otros conceptos STR0</span>
+            <div className="concepts-grid">
+              {draft.otherConcepts.map((concept, index) => (
+                <select
+                  key={index}
+                  name={`otherConcepts${index}`}
+                  value={concept}
+                  onChange={updateDraft}
+                >
+                  <option value="">Sin definir</option>
+                  {stroConceptOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              ))}
+            </div>
+          </div>
           <label className="input-field">
             <span>¿Gestionar como Fast Track?</span>
             <input type="checkbox" name="fastTrack" checked={draft.fastTrack} onChange={updateDraft} />
